@@ -1,0 +1,49 @@
+# --- Earth Engine & geospatial ---
+earthengine-api>=0.1.400
+geemap>=0.32
+rasterio>=1.3
+xarray>=2024.3
+rioxarray>=0.15
+geopandas>=0.14
+shapely>=2.0
+pyproj>=3.6
+
+# --- Data wrangling ---
+numpy>=1.26
+pandas>=2.2
+scipy>=1.12
+
+# --- Machine learning ---
+scikit-learn>=1.4
+xgboost>=2.0
+lightgbm>=4.3
+torch>=2.2
+shap>=0.45
+mgwr>=2.2          # Geographically Weighted Regression
+
+# --- Optimization ---
+deap>=1.4           # Genetic algorithms
+pymoo>=0.6
+
+# --- Microclimate / ecosystem modeling (optional, install if using SOLWEIG/InVEST) ---
+# umep-plugin          # SOLWEIG is typically run via QGIS/UMEP plugin, not pip
+# natcap.invest>=3.14
+
+# --- API & dashboard backend ---
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6
+
+# --- Visualization ---
+matplotlib>=3.8
+plotly>=5.20
+folium>=0.16
+
+# --- Experiment tracking / reproducibility ---
+mlflow>=2.11
+dvc>=3.50
+pyyaml>=6.0
+
+# --- Testing ---
+pytest>=8.1
+pytest-cov>=5.0

@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venvUHM/
+
+# Data (never commit raw/processed geospatial data)
+data/raw/**
+data/interim/**
+data/processed/**
+data/training_tables/*.csv
+!data/**/.gitkeep
+
+# Model artifacts
+models/**/*.pt
+models/**/*.pkl
+models/**/*.joblib
+!models/**/.gitkeep
+
+# Outputs
+outputs/**/*.tif
+outputs/**/*.geojson
+outputs/**/*.pdf
+outputs/**/*.html
+!outputs/**/.gitkeep
+
+# Credentials
+configs/aoi.yaml
+*.json
+!package.json
+.env
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MLflow / DVC
+mlruns/
+.dvc/cache
