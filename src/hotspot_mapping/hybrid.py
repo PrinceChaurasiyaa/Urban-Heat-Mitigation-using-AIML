@@ -113,7 +113,8 @@ def connected_components(classified_array, min_class=2, connectivity=8):
 # ---------------------------------------------------------------------------
 # 4. Getis-Ord Gi* — statistical significance per pixel
 # ---------------------------------------------------------------------------
-def compute_gi_star_raster(lst_array, k_neighbors=8, subsample_for_speed=None):
+def compute_gi_star_raster(lst_array, k_neighbors=8, subsample_for_speed=None,
+                            use_permutation_test=False, n_permutations=99):
     """
     Computes Getis-Ord Gi* z-scores for every valid pixel in the LST raster,
     using a KNN spatial weights graph built from pixel row/col positions.
@@ -123,10 +124,21 @@ def compute_gi_star_raster(lst_array, k_neighbors=8, subsample_for_speed=None):
     if needed (e.g., subsample_for_speed=2 uses every 2nd pixel in each
     dimension, then upsamples results back — trades resolution for runtime).
 
+    use_permutation_test=False (default): skips esda's conditional-permutation
+    p-value estimation entirely (the `_crand_plus`/joblib path that causes
+    MemoryError on large rasters — each worker process has to pickle a chunk
+    of the weights/data to ship across processes, which blows up RAM well
+    before hundreds of thousands of pixels finish). Instead, the p-value is
+    derived analytically from the z-score via the standard normal CDF, which
+    is the same interpretation ("z > 1.96 = 95% confidence") most Gi* usage
+    relies on anyway. Set True only on already-subsampled/small rasters where
+    you specifically want esda's simulated p-values.
+
     Returns a z-score array the same shape as lst_array (NaN where invalid).
     """
     from libpysal.weights import KNN
     from esda.getisord import G_Local
+    from scipy import stats as scipy_stats
 
     if subsample_for_speed and subsample_for_speed > 1:
         s = subsample_for_speed
@@ -140,17 +152,24 @@ def compute_gi_star_raster(lst_array, k_neighbors=8, subsample_for_speed=None):
     coords = np.column_stack([cols, rows])  # x=col, y=row for KNN
 
     print(f"Computing Getis-Ord Gi* on {len(values):,} pixels "
-          f"(k={k_neighbors} neighbors)...")
+          f"(k={k_neighbors} neighbors, permutation_test={use_permutation_test})...")
 
     w = KNN(coords, k=k_neighbors)
     w.transform = "r"
 
-    g_local = G_Local(values, w, star=True)
+    permutations = n_permutations if use_permutation_test else 0
+    g_local = G_Local(values, w, star=True, permutations=permutations)
 
     z_full = np.full(work_array.shape, np.nan)
     p_full = np.full(work_array.shape, np.nan)
     z_full[rows, cols] = g_local.Zs
-    p_full[rows, cols] = g_local.p_sim
+
+    if use_permutation_test:
+        p_full[rows, cols] = g_local.p_sim
+    else:
+        # Analytic two-tailed p-value from the z-score (standard normal),
+        # avoids esda's permutation/joblib path entirely.
+        p_full[rows, cols] = 2 * (1 - scipy_stats.norm.cdf(np.abs(g_local.Zs)))
 
     if s > 1:
         # Upsample back to original resolution via nearest-neighbor repeat
@@ -237,7 +256,8 @@ def labeled_regions_to_polygons(labeled_array, lst_array, z_array, transform, cr
 # ---------------------------------------------------------------------------
 def run_phase2(data_dir, output_dir, method="percentile",
                k_neighbors=8, z_thresh=1.96, p_thresh=0.05,
-               subsample_for_speed=None, min_region_pixels=5):
+               subsample_for_speed=None, min_region_pixels=5,
+               use_permutation_test=False):
     data_dir = Path(data_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -268,7 +288,8 @@ def run_phase2(data_dir, output_dir, method="percentile",
 
     # ---- Getis-Ord Gi* (significance) ----
     z_array, p_array = compute_gi_star_raster(
-        lst_array, k_neighbors=k_neighbors, subsample_for_speed=subsample_for_speed
+        lst_array, k_neighbors=k_neighbors, subsample_for_speed=subsample_for_speed,
+        use_permutation_test=use_permutation_test,
     )
 
     gi_out_path = output_dir / "Delhi_GiStar_zscore.tif"
@@ -323,10 +344,16 @@ if __name__ == "__main__":
                          help="Coarsen grid by this factor for Gi* speed (e.g. 2 or 4). "
                               "Recommended for rasters with >500k valid pixels.")
     parser.add_argument("--min-region-pixels", type=int, default=5)
+    parser.add_argument("--use-permutation-test", action="store_true",
+                         help="Use esda's simulated p-value (slow, memory-heavy on large "
+                              "rasters — causes MemoryError above ~100k-200k pixels on "
+                              "typical machines). Default off: p-value is derived "
+                              "analytically from the z-score instead.")
     args = parser.parse_args()
 
     run_phase2(
         args.data_dir, args.output_dir, args.method,
         args.k_neighbors, args.z_thresh, args.p_thresh,
         args.subsample, args.min_region_pixels,
+        args.use_permutation_test,
     )
