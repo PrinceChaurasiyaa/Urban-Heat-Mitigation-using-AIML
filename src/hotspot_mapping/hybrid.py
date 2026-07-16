@@ -21,7 +21,7 @@ Install:
     pip install rasterio numpy pandas geopandas shapely scipy libpysal esda
 
 Run:
-    python phase2_gi_star.py --data-dir ./data/raw/landsat8 --output-dir ./outputs/heat_maps
+    python src/hotspot_mapping/hybrid.py --data-dir ./data/raw/landsat8 --output-dir ./outputs/heat_maps
 """
 
 import argparse

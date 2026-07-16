@@ -13,7 +13,7 @@ Install (if not already):
     pip install matplotlib rasterio geopandas
 
 Run:
-    python phase2_visualize.py --output-dir ./outputs/heat_maps
+    python src/hotspot_mapping/phase2_visualize.py --output-dir ./outputs/heat_maps
 """
 
 import argparse
